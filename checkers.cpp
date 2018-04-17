@@ -52,6 +52,18 @@ void drawPieces(std::vector<sf::CircleShape>& pieces, sf::RenderWindow& window) 
     }
 }
 
+// Debug function for printing the contents of the board array
+void printBArray(int (&b_array)[6][6]) {
+    for(int i = 0; i < 6; i++) {
+        std::cout << '{';
+        for(int j = 0; j < 6; j++) {
+            std::cout << b_array[i][j];
+            if(j != 5) { std::cout << ','; }
+        }
+        std::cout << "}," << std::endl;
+    }
+}
+
 int main() {
     // Initialize popup window, i.e. the game window. Note: cannot resize window
     sf::RenderWindow window(sf::VideoMode(600,600), "Checkers", 
@@ -77,6 +89,16 @@ int main() {
     // Initialize ints for tracking co-ords of board clicks
     int m_xpos = 0;
     int m_ypos = 0;
+    // Intialize 2d board array
+    int b_array[6][6] = 
+    {
+        {0,1,0,1,0,1},
+        {1,0,1,0,1,0},
+        {0,0,0,0,0,0},
+        {0,0,0,0,0,0},
+        {0,2,0,2,0,2},
+        {2,0,2,0,2,0},
+    };
     // Creates game window instance
     while(window.isOpen()) {
         // Tracks interactions with window
@@ -93,17 +115,19 @@ int main() {
                         case sf::Keyboard::Escape:
                             window.close();
                             break;
+                        // Prints b_array on space keypress
+                        case sf::Keyboard::Space:
+                            printBArray(b_array);
+                            break;
                         // Default for unhandled keypress
                         default:
                             break;
                     }
                     break;
                 case sf::Event::MouseButtonPressed:
-                    // Prints mouse position on left click, otherwise break
+                    // Gets mouse co-ords and sets highlight on left click, 
+                    // otherwise break
                     if(event.mouseButton.button == sf::Mouse::Left) {
-                        std::cout << "Left click!" << std::endl;
-                        std::cout << "Mouse X: " << event.mouseButton.x << std::endl;
-                        std::cout << "Mouse Y: " << event.mouseButton.y << std::endl;
                         // Gets x and y co-ords of board of mouse click
                         m_xpos = event.mouseButton.x / 100;
                         m_ypos = event.mouseButton.y / 100;
