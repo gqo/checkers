@@ -2,71 +2,110 @@
 #include <iostream>
 #include <vector>
 
-// class piece 
-// {
-// public:
-//     const bool color;
-//     sf::CircleShape shape;
-    
-// };
-
-// Function for checking piece type at board co-ords
-// Pass y co-ordinate data to row, x co-ordinate data to col
-int getPiece(int& row, int& col, int (&b_array)[6][6]) {
-    std::cout << "Got piece at (" << row << "," << col << "): " << b_array[row][col];
-    std::cout << std::endl;
-    return b_array[row][col];
+// Checks if co-ords are in bounds in 2d array
+bool inBounds(int row, int col) {
+    if(((row >= 0)&&(row < 6))&&((col >=0 )&&(col < 6))) { return 1; }
+    else { return 0; }
 }
 
-// Checks if highlight is valid for future moves
-// Left = 0 for side
-bool checkValid(int& row, int& col, int& piece_type, bool side) {
-    if(!side && (col-1 < 0)) { return 0; }
-    else if(side && (col+1 > 5)) { return 0; }
+// Checks for possible moves, sets vector of possible moves in pair<int,int> form
+void setPossibles(int& row, int& col, int (&b_array)[6][6],
+    std::vector<std::pair<int,int> >& possibles) {
+    int piece_type = b_array[row][col];
+    std::cout << "Ran setPossibles, before clear, vector size is: " << possibles.size() << std::endl;
+    for(int i = 0; i < possibles.size(); i++) { possibles.pop_back(); }
+    if(possibles.size() != 0) { // Check if clear vector doesn't work
+        for(int i = 0; i < possibles.size(); i++) { possibles.pop_back(); }
+    }
+    std::cout << "Ran setPossibles, after clear, vector size is: " << possibles.size() << std::endl;
     switch(piece_type) {
-        case 0:
-            return 0;
+        case 1: // White
+            // Left
+            if(inBounds(row+1,col-1)) {
+                switch(b_array[row+1][col-1]) {
+                    case 0:
+                        possibles.push_back(std::make_pair(row+1,col-1));
+                        break;
+                    case 2:
+                        if(inBounds(row+2,col-2)){
+                            if(b_array[row+2][col-2] == 0) {
+                                possibles.push_back(std::make_pair(row+2,col-2));
+                            }
+                        }
+                        break;
+                    default:
+                        break; 
+                }
+            }
+            // Right
+            if(inBounds(row+1,col+1)) {
+                switch(b_array[row+1][col+1]) {
+                    case 0:
+                        possibles.push_back(std::make_pair(row+1,col+1));
+                        break;
+                    case 2:
+                        if(inBounds(row+2,col+2)){
+                            if(b_array[row+2][col+2] == 0) {
+                                possibles.push_back(std::make_pair(row+2,col+2));
+                            }
+                        }
+                        break;
+                    default:
+                        break; 
+                }
+            }
             break;
-        case 1:
-            if(row+1 > 5) { return 0; }
-            else { return 1; }
-            break;
-        case 2:
-            if(row-1 < 0) { return 0; }
-            else { return 1; }
+        case 2: // Black
+            // Left
+            if(inBounds(row-1,col-1)) {
+                switch(b_array[row-1][col-1]) {
+                    case 0:
+                        possibles.push_back(std::make_pair(row-1,col-1));
+                        break;
+                    case 1:
+                        if(inBounds(row-2,col-2)){
+                            if(b_array[row-2][col-2] == 0) {
+                                possibles.push_back(std::make_pair(row-2,col-2));
+                            }
+                        }
+                        break;
+                    default:
+                        break; 
+                }
+            }
+            // Right
+            if(inBounds(row-1,col+1)) {
+                switch(b_array[row-1][col+1]) {
+                    case 0:
+                        possibles.push_back(std::make_pair(row-1,col+1));
+                        break;
+                    case 1:
+                        if(inBounds(row-2,col+2)){
+                            if(b_array[row-2][col+2] == 0) {
+                                possibles.push_back(std::make_pair(row-2,col+2));
+                            }
+                        }
+                        break;
+                    default:
+                        break; 
+                }
+            }
             break;
         default:
             break;
     }
+    std::cout << "Finished setPossibles, vector size is: " << possibles.size() << std::endl;
 }
 
-void drawPossibles(int& xcord, int& ycord, int& piece_type, sf::RenderWindow& window, 
-    sf::RectangleShape& phlight) {
-    switch(piece_type) {
-        case 0:
-            break;
-        case 1:
-            if(checkValid(ycord,xcord,piece_type,0)) {
-                phlight.setPosition((xcord-1)*100+3,(ycord+1)*100+3);
-                window.draw(phlight);
-            }
-            if(checkValid(ycord,xcord,piece_type,1)) {
-                phlight.setPosition((xcord+1)*100+3,(ycord+1)*100+3);
-                window.draw(phlight);
-            }
-            break;
-        case 2:
-            if(checkValid(ycord,xcord,piece_type,0)) {
-                phlight.setPosition((xcord-1)*100+3,(ycord-1)*100+3);
-                window.draw(phlight);
-            }
-            if(checkValid(ycord,xcord,piece_type,1)) {
-                phlight.setPosition((xcord+1)*100+3,(ycord-1)*100+3);
-                window.draw(phlight);
-            }
-            break;
-        default:
-            break;
+void drawPossibles(sf::RenderWindow& window, sf::RectangleShape& phlight, 
+    std::vector<std::pair<int,int> >& possibles) {
+    int x;
+    int y;
+    for(int i = 0; i < possibles.size(); i++) {
+        x = possibles[i].second;
+        y = possibles[i].first;
+        phlight.setPosition(x*100+3,y*100+3);
+        window.draw(phlight);
     }
 }
 
@@ -160,25 +199,27 @@ int main() {
         // int m_ycord_new = 0;
         // Tracks if piece held 
         bool held = 0; // false = not held
-        bool hvalid = 0; // tracks if hlight should be drawn
-        // Current type of piece (black, white, nothing)
-        int piece_type = 0;
-    // Intialize 2d board array
-    // Note: Board co-ordinates are classified as (row,column) as such it
-    // can be confusing that the x-axis and y-axis are switched between
-    // SFML recognition stuff and these (row,column) setups. Example:
-    // SFML mouse co-ordinates are given as (x,y) position of mouse in window
-    // from the top left. Essentially, x is the column and y is the row.
-    // So SFML (x,y) == b_array(y,x)
+    bool hvalid = 0; // tracks if hlight should be drawn
+    // Current type of piece (black, white, nothing)
+    int piece_type = 0;
+    /* Intialize 2d board array
+        Note: Board co-ordinates are classified as (row,column) as such it
+        can be confusing that the x-axis and y-axis are switched between
+        SFML recognition stuff and these (row,column) setups. Example:
+        SFML mouse co-ordinates are given as (x,y) position of mouse in window
+        from the top left. Essentially, x is the column and y is the row.
+        So SFML (x,y) == b_array(y,x) */
     int b_array[6][6] = 
     {
         {0,1,0,1,0,1},
-        {1,0,1,0,1,0},
+        {1,0,2,0,0,0},
         {0,0,0,0,0,0},
         {0,0,0,0,0,0},
-        {0,2,0,2,0,2},
+        {0,0,0,1,0,2},
         {2,0,2,0,2,0},
     };
+    // Initialize vector for possible move pairs
+    std::vector<std::pair<int,int> > possibles;
     // Creates game window instance
     while(window.isOpen()) {
         // Tracks interactions with window
@@ -212,12 +253,14 @@ int main() {
                             // Gets x and y co-ords of board of mouse click
                             m_xcord_old = event.mouseButton.x / 100;
                             m_ycord_old = event.mouseButton.y / 100;
-                            // std::cout << "Clicked @ (" << m_xcord_old << ',';
-                            // std::cout << m_ycord_old << ')' << std::endl;
                             // Sets highlight box to last square clicked
                             hlight.setPosition(m_xcord_old*100+3,m_ycord_old*100+3);
-                            piece_type = getPiece(m_ycord_old,m_xcord_old,b_array);
-                            if(piece_type != 0) { hvalid = 1; } 
+                            piece_type = b_array[m_ycord_old][m_xcord_old];
+                            setPossibles(m_ycord_old,m_xcord_old,b_array,possibles);
+                            if(piece_type != 0) { 
+                                hvalid = 1;
+                                // setPossibles(m_ycord_old,m_xcord_old,b_array,possibles);
+                            } 
                             else { hvalid = 0; }
                             held = !held;
                         } else {
@@ -236,7 +279,7 @@ int main() {
         window.draw(board); // Draws board sprite
         if(held && hvalid) { 
             window.draw(hlight);
-            drawPossibles(m_xcord_old,m_ycord_old,piece_type,window,phlight);
+            drawPossibles(window,phlight,possibles);
         }
         drawPieces(pieces,window); // Draws game pieces
         window.display();
@@ -257,5 +300,6 @@ int main() {
 (130,30)(130,130)(130,230)
 
 (x-axis, y-axis) for any co-ord pair in SFML
+(row, column) for any 2d array pair
 
 */
