@@ -11,24 +11,30 @@ bool inBounds(int row, int col) {
 }
 
 // Checks for possible moves at specific co-ordinate, sets vector of possible moves in pair<int,int> form
-void setPossibles(int& row, int& col, int (&b_array)[6][6], std::vector<std::pair<int,int> >& possibles) {
+void setPossibles(int& row, int& col, int (&b_array)[6][6], std::vector<std::pair<int,int> >& possibles, bool& cposs) {
+    std::cout << "setPossibles ran! cposs = " << cposs << std::endl;
+    int capture = 0; // 0 = no capture moves, 1 = one capture move, 2 = two capture moves
     int piece_type = b_array[row][col];
     for(int i = 0; i < possibles.size(); i++) { possibles.pop_back(); }
     if(possibles.size() != 0) { // Check if clear vector doesn't work
         for(int i = 0; i < possibles.size(); i++) { possibles.pop_back(); }
     }
     switch(piece_type) {
-        case 1: // White
-            // Left
+        case 1: // White move check
+            // Left diagonal move check
             if(inBounds(row+1,col-1)) {
                 switch(b_array[row+1][col-1]) {
                     case 0:
-                        possibles.push_back(std::make_pair(row+1,col-1));
+                        if(!cposs) { // If capture possible, regular move not possible
+                            possibles.push_back(std::make_pair(row+1,col-1));
+                        }
                         break;
                     case 2:
                         if(inBounds(row+2,col-2)){
                             if(b_array[row+2][col-2] == 0) {
                                 possibles.push_back(std::make_pair(row+2,col-2));
+                                capture++;
+                                cposs = 1;
                             }
                         }
                         break;
@@ -36,16 +42,22 @@ void setPossibles(int& row, int& col, int (&b_array)[6][6], std::vector<std::pai
                         break; 
                 }
             }
-            // Right
+            // Right diagonal move check
             if(inBounds(row+1,col+1)) {
                 switch(b_array[row+1][col+1]) {
                     case 0:
-                        possibles.push_back(std::make_pair(row+1,col+1));
+                        if(capture == 0 && !cposs) { // If capture possible, regular move not possible
+                            possibles.push_back(std::make_pair(row+1,col+1)); 
+                        }
                         break;
                     case 2:
                         if(inBounds(row+2,col+2)){
                             if(b_array[row+2][col+2] == 0) {
+                                if(capture == 0 && possibles.size() == 1) {
+                                    possibles.pop_back();
+                                }
                                 possibles.push_back(std::make_pair(row+2,col+2));
+                                cposs = 1;
                             }
                         }
                         break;
@@ -54,17 +66,21 @@ void setPossibles(int& row, int& col, int (&b_array)[6][6], std::vector<std::pai
                 }
             }
             break;
-        case 2: // Black
-            // Left
+        case 2: // Black move check
+            // Left diagonal move check
             if(inBounds(row-1,col-1)) {
                 switch(b_array[row-1][col-1]) {
                     case 0:
-                        possibles.push_back(std::make_pair(row-1,col-1));
+                        if(!cposs) { // If capture possible, regular move not possible
+                            possibles.push_back(std::make_pair(row-1,col-1));
+                        }
                         break;
                     case 1:
                         if(inBounds(row-2,col-2)){
                             if(b_array[row-2][col-2] == 0) {
                                 possibles.push_back(std::make_pair(row-2,col-2));
+                                capture++;
+                                cposs = 1;
                             }
                         }
                         break;
@@ -72,16 +88,22 @@ void setPossibles(int& row, int& col, int (&b_array)[6][6], std::vector<std::pai
                         break; 
                 }
             }
-            // Right
+            // Right diagonal move check
             if(inBounds(row-1,col+1)) {
                 switch(b_array[row-1][col+1]) {
                     case 0:
-                        possibles.push_back(std::make_pair(row-1,col+1));
+                        if(capture == 0 && !cposs) { // If capture possible, regular move not possible
+                            possibles.push_back(std::make_pair(row-1,col+1)); 
+                        }
                         break;
                     case 1:
                         if(inBounds(row-2,col+2)){
                             if(b_array[row-2][col+2] == 0) {
+                                if(capture == 0 && possibles.size() == 1) {
+                                    possibles.pop_back();
+                                }
                                 possibles.push_back(std::make_pair(row-2,col+2));
+                                cposs = 1;
                             }
                         }
                         break;
@@ -98,22 +120,31 @@ void setPossibles(int& row, int& col, int (&b_array)[6][6], std::vector<std::pai
 // Checks for possibles across the board. Returns 0 if no possible moves left,
 // returns 1 if white has possible moves left, returns 2 if black has possible moves left,
 // returns 3 if both have possible moves left
-int checkPossibles(int(&b_array)[6][6], std::vector<std::pair<int,int> >& possibles) {
+int checkPossibles(int(&b_array)[6][6], std::vector<std::pair<int,int> >& possibles, bool& cposs) {
     int ret = 0;
     for(int i = 0; i < 6; i++) { // Rows
         for(int j = 0; j < 6; j++) { // Cols
             if(b_array[i][j] == 1 && ret == 0) {
-                setPossibles(i,j,b_array,possibles);
+                setPossibles(i,j,b_array,possibles,cposs);
                 if(possibles.size() != 0) { ret = 1; } // If a white move exists, inc by 1
             }
             else if(b_array[i][j] == 2 && ret < 2) {
-                setPossibles(i,j,b_array,possibles);
+                setPossibles(i,j,b_array,possibles,cposs);
                 if(possibles.size() != 0) { ret += 2; } // If a black move exists, inc by 2
             }
             if(ret == 3) { return ret; } // If both exist, return, no need to check more
         }
     }
     return ret;
+}
+
+// Sets capture possible var if there's a capture move possible currently
+void setCPoss(int player, int(&b_array)[6][6], std::vector<std::pair<int,int> >& possibles, bool& cposs) {
+    for(int i = 0; i < 6; i++) { // Rows
+        for(int j = 0; j < 6; j++) { // Cols
+            if(b_array[i][j] == player) { setPossibles(i,j,b_array,possibles,cposs); }
+        }
+    }
 }
 
 // Highlights the possible moves in yellow box
@@ -147,6 +178,7 @@ bool isValidMove(std::pair<int,int>& dest, std::vector<std::pair<int,int> >& pos
 bool movePiece(std::pair<int,int>& origin, std::pair<int,int>& dest, 
     int (&b_array)[6][6]) {
     bool capture = 0;
+    // "Moves" piece from origin to destination co-ordinates
     b_array[dest.first][dest.second] = b_array[origin.first][origin.second];
     // Checks distance between co-ords to see if there's a capture taking place
     if(abs(dest.first-origin.first) == 2) {
@@ -154,6 +186,7 @@ bool movePiece(std::pair<int,int>& origin, std::pair<int,int>& dest,
         b_array[between.first][between.second] = 0;
         capture = 1;
     }
+    // "Removes" piece from origin co-ordinates because it was "moved"
     b_array[origin.first][origin.second] = 0;
     return capture;
 }
@@ -228,12 +261,14 @@ int main() {
         // Turn tracker
         bool turn = 1; // White = 1; Black = 0;
         // Piece capture counts
-        int bcaps = 4; // # of pieces Black has captured
-        int wcaps = 5; // # of pieces White has captured
+        int bcaps = 0; // # of pieces Black has captured
+        int wcaps = 0; // # of pieces White has captured
         // Win return code
         int win = 0; // 0 = no win, 1 = White win, 2 = Black win, 3 = Tie (should be rare, if not impossible)
         // Possible moves return code
         int poss = 3; // 3 = both have moves, 2 = black has moves, 1 = white has moves, 0 = none have moves (game over)
+        // Capture possible
+        bool cposs = 0; // False = no capture possible
     /* Intialize 2d board array
         Note: Board co-ordinates are classified as (row,column) as such it
         can be confusing that the x-axis and y-axis are switched between
@@ -241,6 +276,15 @@ int main() {
         SFML mouse co-ordinates are given as (x,y) position of mouse in window
         from the top left. Essentially, x is the column and y is the row.
         So SFML (x,y) == b_array(y,x) */
+    int b_array[6][6] = // Board for playing
+    {
+        {0,1,0,1,0,1},
+        {1,0,1,0,1,0},
+        {0,0,0,0,0,0},
+        {0,0,0,0,0,0},
+        {0,2,0,2,0,2},
+        {2,0,2,0,2,0},
+    };
     // int b_array[6][6] = // Board for default testing
     // {
     //     {0,1,0,1,0,1},
@@ -259,23 +303,14 @@ int main() {
     //     {0,0,0,0,0,0},
     //     {0,0,0,0,0,0},
     // };
-    int b_array[6][6] = // Board for win-by-forfeit testing
-    {
-        {0,0,0,0,0,0},
-        {0,0,0,2,0,0},
-        {0,0,0,0,0,0},
-        {0,0,1,0,0,0},
-        {0,0,0,0,0,0},
-        {0,0,0,0,0,0},
-    };
-    // int b_array[6][6] = // Board for playing
+    // int b_array[6][6] = // Board for win-by-forfeit testing
     // {
-    //     {0,1,0,1,0,1},
-    //     {1,0,1,0,1,0},
     //     {0,0,0,0,0,0},
+    //     {0,0,0,2,0,0},
     //     {0,0,0,0,0,0},
-    //     {0,2,0,2,0,2},
-    //     {2,0,2,0,2,0},
+    //     {0,0,1,0,0,0},
+    //     {0,0,0,0,1,0},
+    //     {0,0,0,0,0,0},
     // };
     // Initialize vector for possible move pairs
     std::vector<std::pair<int,int> > possibles;
@@ -315,7 +350,7 @@ int main() {
                             m_ycord = event.mouseButton.y / 100;
                             // Gets whether square is black, white, or empty
                             piece_type = b_array[m_ycord][m_xcord];
-                            // If a player clicks on a piece that isn't theres,
+                            // If a player clicks on a piece that isn't theirs,
                             // behave as if they clicked an empty space
                             if(turn && (piece_type == 2)) { piece_type = 0; }
                             else if(!turn && (piece_type == 1)) { piece_type = 0; }
@@ -324,7 +359,7 @@ int main() {
                                     // Sets highlight box to last square clicked
                                     hlight.setPosition(m_xcord*100+3,m_ycord*100+3);
                                     // Calculates possible moves
-                                    setPossibles(m_ycord,m_xcord,b_array,possibles);
+                                    setPossibles(m_ycord,m_xcord,b_array,possibles,cposs);
                                     // Creates original board co-ordinates
                                     origin = std::make_pair(m_ycord,m_xcord);
                                     // If not empty, highlight clicked square
@@ -342,21 +377,23 @@ int main() {
                                         if(movePiece(origin,dest,b_array)) {
                                             if(turn) { 
                                                 wcaps++; 
-                                                if(wcaps == 6) { 
+                                                if(wcaps == 6) { // If White captures all pieces, White wins
                                                     win = 1; 
                                                     window.setTitle("WHITE won!");
                                                 }
                                             }
                                             else { 
                                                 bcaps++;
-                                                if(bcaps == 6) { 
+                                                if(bcaps == 6) { // If Black captures all pieces, Black wins
                                                     win = 2;
                                                     window.setTitle("BLACK won!");
                                                 }
                                             }
                                         }
-                                        poss = checkPossibles(b_array,possibles);
-                                        std::cout << "Poss #: " << poss << std::endl;
+                                        cposs = 0; // If cposs is not reset here, check possible can end up thinking there are
+                                        // no moves possible if there are ONLY regular moves possible
+                                        poss = checkPossibles(b_array,possibles,cposs);
+                                        // Checks if moves are possible and handles forfeit-wins and skipped turns
                                         switch(poss) {
                                             case 0:
                                                 if(wcaps == bcaps) {
@@ -383,6 +420,9 @@ int main() {
                                         }
                                         // Switch turns
                                         turn = !turn;
+                                        cposs = 0;
+                                        if(turn) { setCPoss(1,b_array,possibles,cposs); }
+                                        else{ setCPoss(2,b_array,possibles,cposs); }
                                     }
                                     // Piece is "released"
                                     held = !held;
