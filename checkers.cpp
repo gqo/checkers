@@ -128,15 +128,18 @@ bool isValidMove(std::pair<int,int>& dest, std::vector<std::pair<int,int> >& pos
 }
 
 // Moves piece and accounts for removing captured pieces
-void movePiece(std::pair<int,int>& origin, std::pair<int,int>& dest, 
+bool movePiece(std::pair<int,int>& origin, std::pair<int,int>& dest, 
     int (&b_array)[6][6]) {
+    bool capture = 0;
     b_array[dest.first][dest.second] = b_array[origin.first][origin.second];
     // Checks distance between co-ords to see if there's a capture taking place
     if(abs(dest.first-origin.first) == 2) {
         std::pair<int,int> between = findBetween(origin,dest);
         b_array[between.first][between.second] = 0;
+        capture = 1;
     }
     b_array[origin.first][origin.second] = 0;
+    return capture;
 }
 
 // Function for drawing game pieces
@@ -205,6 +208,12 @@ int main() {
     bool hvalid = 0; // tracks if hlight should be drawn
     // Current type of piece (black, white, nothing)
     int piece_type = 0;
+    // Intialize vars for tracking game vals
+        // Turn tracker
+        bool turn = 1; // White = 1; Black = 0;
+        // Piece capture counts
+        int bcaps = 0; // # of pieces Black has captured
+        int wcaps = 0; // # of pieces White has captured
     /* Intialize 2d board array
         Note: Board co-ordinates are classified as (row,column) as such it
         can be confusing that the x-axis and y-axis are switched between
@@ -252,36 +261,48 @@ int main() {
                     // Gets mouse co-ords and sets highlight on left click, 
                     // otherwise break
                     if(event.mouseButton.button == sf::Mouse::Left) {
-                        if(!held) {
-                            // Gets x and y co-ords of board of mouse click
-                            m_xcord = event.mouseButton.x / 100;
-                            m_ycord = event.mouseButton.y / 100;
-                            // Sets highlight box to last square clicked
-                            hlight.setPosition(m_xcord*100+3,m_ycord*100+3);
-                            // Gets whether square is black, white, or empty
-                            piece_type = b_array[m_ycord][m_xcord];
-                            // Calculates possible moves
-                            setPossibles(m_ycord,m_xcord,b_array,possibles);
-                            // Creates original board co-ordinates
-                            origin = std::make_pair(m_ycord,m_xcord);
-                            // If not empty, highlight clicked square
-                            if(piece_type != 0) { hvalid = 1; } 
-                            else { hvalid = 0; }
-                            // Piece is being "held"
-                            held = !held;
-                        } else {
-                            // Gets x and y co-ords of board of mouse click
-                            m_xcord = event.mouseButton.x / 100;
-                            m_ycord = event.mouseButton.y / 100;
-                            // Creates destination board co-ordinates
-                            dest = std::make_pair(m_ycord,m_xcord);
-                            // Checks if move is valid and then moves pieces
-                            if(isValidMove(dest,possibles)) {
-                                std::cout << "Piece moved!" << std::endl;
-                                movePiece(origin,dest,b_array);
+                        // Gets x and y co-ords of board of mouse click
+                        m_xcord = event.mouseButton.x / 100;
+                        m_ycord = event.mouseButton.y / 100;
+                        // Gets whether square is black, white, or empty
+                        piece_type = b_array[m_ycord][m_xcord];
+                        // If a player clicks on a piece that isn't theres,
+                        // behave as if they clicked an empty space
+                        if(turn && (piece_type == 2)) { piece_type = 0; }
+                        else if(!turn && (piece_type == 1)) { piece_type = 0; }
+                        if(piece_type != 0 || held) {
+                            if(!held) {
+                                // Sets highlight box to last square clicked
+                                hlight.setPosition(m_xcord*100+3,m_ycord*100+3);
+                                // Calculates possible moves
+                                setPossibles(m_ycord,m_xcord,b_array,possibles);
+                                // Creates original board co-ordinates
+                                origin = std::make_pair(m_ycord,m_xcord);
+                                // If not empty, highlight clicked square
+                                if(piece_type != 0) { hvalid = 1; } 
+                                else { hvalid = 0; }
+                                // Piece is being "held"
+                                held = !held;
+                            } else {
+                                // Creates destination board co-ordinates
+                                dest = std::make_pair(m_ycord,m_xcord);
+                                // Checks if move is valid and then moves pieces
+                                if(isValidMove(dest,possibles)) {
+                                    std::cout << "Piece moved!" << std::endl;
+                                    // Checks if piece was captured during move, iterates
+                                    // capture totals respectively.
+                                    if(movePiece(origin,dest,b_array)) {
+                                        if(turn) { wcaps++; }
+                                        else { bcaps++; }
+                                    }
+                                    std::cout << "White has " << wcaps << " captures." << std::endl;
+                                    std::cout << "Black has " << bcaps << " captures." << std::endl;
+                                    // Switch turns
+                                    turn = !turn;
+                                }
+                                // Piece is "released"
+                                held = !held;
                             }
-                            // Piece is released
-                            held = !held;
                         }
                     }
                     break;
