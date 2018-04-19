@@ -1,6 +1,8 @@
 #include <SFML/Graphics.hpp>
 #include <iostream>
 #include <vector>
+// For array co-ordinate calculation
+#include <math.h>
 
 // Checks if co-ords are in bounds in 2d array
 bool inBounds(int row, int col) {
@@ -97,6 +99,7 @@ void setPossibles(int& row, int& col, int (&b_array)[6][6],
     std::cout << "Finished setPossibles, vector size is: " << possibles.size() << std::endl;
 }
 
+// Highlights the possible moves in yellow box
 void drawPossibles(sf::RenderWindow& window, sf::RectangleShape& phlight, 
     std::vector<std::pair<int,int> >& possibles) {
     int x;
@@ -107,6 +110,33 @@ void drawPossibles(sf::RenderWindow& window, sf::RectangleShape& phlight,
         phlight.setPosition(x*100+3,y*100+3);
         window.draw(phlight);
     }
+}
+
+// Finds the co-ordinate pair between two co-ordinate pairs
+std::pair<int,int> findBetween(std::pair<int,int>& origin, std::pair<int,int>& dest) {
+    int row = ceil((origin.first+dest.first)/2);
+    int col = ceil((origin.second+dest.second)/2);
+    return std::make_pair(row,col);
+}
+
+// Checks if destination is in possible calculated moves
+bool isValidMove(std::pair<int,int>& dest, std::vector<std::pair<int,int> >& possibles) {
+    for(int i = 0; i < possibles.size(); i++) {
+        if(possibles[i] == dest) { return 1; }
+    }
+    return 0;
+}
+
+// Moves piece and accounts for removing captured pieces
+void movePiece(std::pair<int,int>& origin, std::pair<int,int>& dest, 
+    int (&b_array)[6][6]) {
+    b_array[dest.first][dest.second] = b_array[origin.first][origin.second];
+    // Checks distance between co-ords to see if there's a capture taking place
+    if(abs(dest.first-origin.first) == 2) {
+        std::pair<int,int> between = findBetween(origin,dest);
+        b_array[between.first][between.second] = 0;
+    }
+    b_array[origin.first][origin.second] = 0;
 }
 
 // Function for initializing game pieces (unnecessary, but ugly otherwise)
@@ -193,10 +223,10 @@ int main() {
     phlight.setPosition(103,103);
     // Initialize vars for tracking clicks
         // Co-ords for board, set on click, from top left
-        int m_xcord_old = 0; 
-        int m_ycord_old = 0;
-        // int m_xcord_new = 0; 
-        // int m_ycord_new = 0;
+        int m_xcord = 0; 
+        int m_ycord = 0;
+        std::pair<int,int> origin;
+        std::pair<int,int> dest;
         // Tracks if piece held 
         bool held = 0; // false = not held
     bool hvalid = 0; // tracks if hlight should be drawn
@@ -251,21 +281,33 @@ int main() {
                     if(event.mouseButton.button == sf::Mouse::Left) {
                         if(!held) {
                             // Gets x and y co-ords of board of mouse click
-                            m_xcord_old = event.mouseButton.x / 100;
-                            m_ycord_old = event.mouseButton.y / 100;
+                            m_xcord = event.mouseButton.x / 100;
+                            m_ycord = event.mouseButton.y / 100;
                             // Sets highlight box to last square clicked
-                            hlight.setPosition(m_xcord_old*100+3,m_ycord_old*100+3);
-                            piece_type = b_array[m_ycord_old][m_xcord_old];
-                            setPossibles(m_ycord_old,m_xcord_old,b_array,possibles);
-                            if(piece_type != 0) { 
-                                hvalid = 1;
-                                // setPossibles(m_ycord_old,m_xcord_old,b_array,possibles);
-                            } 
+                            hlight.setPosition(m_xcord*100+3,m_ycord*100+3);
+                            // Gets whether square is black, white, or empty
+                            piece_type = b_array[m_ycord][m_xcord];
+                            // Calculates possible moves
+                            setPossibles(m_ycord,m_xcord,b_array,possibles);
+                            // Creates original board co-ordinates
+                            origin = std::make_pair(m_ycord,m_xcord);
+                            // If not empty, highlight clicked square
+                            if(piece_type != 0) { hvalid = 1; } 
                             else { hvalid = 0; }
+                            // Piece is being "held"
                             held = !held;
                         } else {
-                            // m_xcord_new = event.mouseButton.x / 100;
-                            // m_ycord_new = event.mouseButton.y / 100;
+                            // Gets x and y co-ords of board of mouse click
+                            m_xcord = event.mouseButton.x / 100;
+                            m_ycord = event.mouseButton.y / 100;
+                            // Creates destination board co-ordinates
+                            dest = std::make_pair(m_ycord,m_xcord);
+                            // Checks if move is valid and then moves pieces
+                            if(isValidMove(dest,possibles)) {
+                                std::cout << "Piece moved!" << std::endl;
+                                movePiece(origin,dest,b_array);
+                            }
+                            // Piece is released
                             held = !held;
                         }
                     }
