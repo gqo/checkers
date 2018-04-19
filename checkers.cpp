@@ -1,7 +1,7 @@
 #include <SFML/Graphics.hpp>
 #include <iostream>
 #include <vector>
-// For array co-ordinate calculation
+// For array co-ordinate calculation, specifically abs() and ceil()
 #include <math.h>
 
 // Checks if co-ords are in bounds in 2d array
@@ -139,45 +139,17 @@ void movePiece(std::pair<int,int>& origin, std::pair<int,int>& dest,
     b_array[origin.first][origin.second] = 0;
 }
 
-// Function for initializing game pieces (unnecessary, but ugly otherwise)
-void initPieces(std::vector<sf::CircleShape>& pieces) {
-    int y = 10; // y-axis starting place
-    int x = 110; // x-axis starting place
-    // For loop for creation of white pieces
-    for(int i = 0; i < 6; i++) {
-        if(i == 3){
-            y = 110;
-            x = 10;
-        }
-        sf::CircleShape piece_wh(40);
-        piece_wh.setFillColor(sf::Color::White);
-        piece_wh.setOutlineThickness(5);
-        piece_wh.setOutlineColor(sf::Color(80,80,80)); // Grey outline
-        piece_wh.setPosition(x,y);
-        pieces.push_back(piece_wh);
-        x += 200;
-    }
-    y = 410;
-    x = 110;
-    for(int i = 0; i < 6; i++) {
-        if(i == 3){
-            y = 510;
-            x = 10;
-        }
-        sf::CircleShape piece_bl(40);
-        piece_bl.setFillColor(sf::Color::Black);
-        piece_bl.setOutlineThickness(5);
-        piece_bl.setOutlineColor(sf::Color(80,80,80)); // Grey outline
-        piece_bl.setPosition(x,y);
-        pieces.push_back(piece_bl);
-        x += 200;
-    }
-}
-
 // Function for drawing game pieces
-void drawPieces(std::vector<sf::CircleShape>& pieces, sf::RenderWindow& window) {
-    for(int i = 0; i < pieces.size(); i++) {
-        window.draw(pieces[i]);
+void drawPieces(sf::CircleShape& piece, int (&b_array)[6][6], sf::RenderWindow& window) {
+    for(int i = 0; i < 6; i++) {
+        for(int j = 0; j < 6; j++) {
+            if(b_array[i][j] != 0) {
+                if(b_array[i][j] == 1) { piece.setFillColor(sf::Color::White); }
+                else if(b_array[i][j] == 2) { piece.setFillColor(sf::Color::Black); }
+                piece.setPosition(j*100+10,i*100+10);
+                window.draw(piece);
+            }
+        }
     }
 }
 
@@ -206,9 +178,10 @@ int main() {
     sf::Sprite board;
     board.setTexture(b_texture);
     board.setPosition(0,0);
-    // Initialize vector for tracking pieces and initialize them
-    std::vector<sf::CircleShape> pieces;
-    initPieces(pieces);
+    // Initialize piece shape
+    sf::CircleShape piece(40);
+    piece.setOutlineThickness(5);
+    piece.setOutlineColor(sf::Color(80,80,80)); // Grey outline
     // Initialize click highlight square
     sf::RectangleShape hlight(sf::Vector2f(94,94));
     hlight.setFillColor(sf::Color::Transparent);
@@ -323,7 +296,7 @@ int main() {
             window.draw(hlight);
             drawPossibles(window,phlight,possibles);
         }
-        drawPieces(pieces,window); // Draws game pieces
+        drawPieces(piece,b_array,window); // Draws game pieces
         window.display();
     }
     return 0;
