@@ -10,16 +10,13 @@ bool inBounds(int row, int col) {
     else { return 0; }
 }
 
-// Checks for possible moves, sets vector of possible moves in pair<int,int> form
-void setPossibles(int& row, int& col, int (&b_array)[6][6],
-    std::vector<std::pair<int,int> >& possibles) {
+// Checks for possible moves at specific co-ordinate, sets vector of possible moves in pair<int,int> form
+void setPossibles(int& row, int& col, int (&b_array)[6][6], std::vector<std::pair<int,int> >& possibles) {
     int piece_type = b_array[row][col];
-    std::cout << "Ran setPossibles, before clear, vector size is: " << possibles.size() << std::endl;
     for(int i = 0; i < possibles.size(); i++) { possibles.pop_back(); }
     if(possibles.size() != 0) { // Check if clear vector doesn't work
         for(int i = 0; i < possibles.size(); i++) { possibles.pop_back(); }
     }
-    std::cout << "Ran setPossibles, after clear, vector size is: " << possibles.size() << std::endl;
     switch(piece_type) {
         case 1: // White
             // Left
@@ -96,12 +93,31 @@ void setPossibles(int& row, int& col, int (&b_array)[6][6],
         default:
             break;
     }
-    std::cout << "Finished setPossibles, vector size is: " << possibles.size() << std::endl;
+}
+
+// Checks for possibles across the board. Returns 0 if no possible moves left,
+// returns 1 if white has possible moves left, returns 2 if black has possible moves left,
+// returns 3 if both have possible moves left
+int checkPossibles(int(&b_array)[6][6], std::vector<std::pair<int,int> >& possibles) {
+    int ret = 0;
+    for(int i = 0; i < 6; i++) { // Rows
+        for(int j = 0; j < 6; j++) { // Cols
+            if(b_array[i][j] == 1 && ret == 0) {
+                setPossibles(i,j,b_array,possibles);
+                if(possibles.size() != 0) { ret = 1; } // If a white move exists, inc by 1
+            }
+            else if(b_array[i][j] == 2 && ret < 2) {
+                setPossibles(i,j,b_array,possibles);
+                if(possibles.size() != 0) { ret += 2; } // If a black move exists, inc by 2
+            }
+            if(ret == 3) { return ret; } // If both exist, return, no need to check more
+        }
+    }
+    return ret;
 }
 
 // Highlights the possible moves in yellow box
-void drawPossibles(sf::RenderWindow& window, sf::RectangleShape& phlight, 
-    std::vector<std::pair<int,int> >& possibles) {
+void drawPossibles(sf::RenderWindow& window, sf::RectangleShape& phlight, std::vector<std::pair<int,int> >& possibles) {
     int x;
     int y;
     for(int i = 0; i < possibles.size(); i++) {
@@ -144,8 +160,8 @@ bool movePiece(std::pair<int,int>& origin, std::pair<int,int>& dest,
 
 // Function for drawing game pieces
 void drawPieces(sf::CircleShape& piece, int (&b_array)[6][6], sf::RenderWindow& window) {
-    for(int i = 0; i < 6; i++) {
-        for(int j = 0; j < 6; j++) {
+    for(int i = 0; i < 6; i++) { // Rows
+        for(int j = 0; j < 6; j++) { // Cols
             if(b_array[i][j] != 0) {
                 if(b_array[i][j] == 1) { piece.setFillColor(sf::Color::White); }
                 else if(b_array[i][j] == 2) { piece.setFillColor(sf::Color::Black); }
@@ -212,8 +228,12 @@ int main() {
         // Turn tracker
         bool turn = 1; // White = 1; Black = 0;
         // Piece capture counts
-        int bcaps = 0; // # of pieces Black has captured
-        int wcaps = 0; // # of pieces White has captured
+        int bcaps = 4; // # of pieces Black has captured
+        int wcaps = 5; // # of pieces White has captured
+        // Win return code
+        int win = 0; // 0 = no win, 1 = White win, 2 = Black win, 3 = Tie (should be rare, if not impossible)
+        // Possible moves return code
+        int poss = 3; // 3 = both have moves, 2 = black has moves, 1 = white has moves, 0 = none have moves (game over)
     /* Intialize 2d board array
         Note: Board co-ordinates are classified as (row,column) as such it
         can be confusing that the x-axis and y-axis are switched between
@@ -221,15 +241,42 @@ int main() {
         SFML mouse co-ordinates are given as (x,y) position of mouse in window
         from the top left. Essentially, x is the column and y is the row.
         So SFML (x,y) == b_array(y,x) */
-    int b_array[6][6] = 
+    // int b_array[6][6] = // Board for default testing
+    // {
+    //     {0,1,0,1,0,1},
+    //     {1,0,2,0,0,0},
+    //     {0,0,0,0,0,0},
+    //     {0,0,0,0,0,0},
+    //     {0,0,0,1,0,2},
+    //     {2,0,2,0,2,0},
+    // };
+    // int b_array[6][6] = // Board for win-by-capture testing
+    // {
+    //     {0,0,0,0,0,0},
+    //     {0,1,0,0,0,0},
+    //     {0,0,0,0,0,0},
+    //     {0,0,0,2,0,0},
+    //     {0,0,0,0,0,0},
+    //     {0,0,0,0,0,0},
+    // };
+    int b_array[6][6] = // Board for win-by-forfeit testing
     {
-        {0,1,0,1,0,1},
-        {1,0,2,0,0,0},
+        {0,0,0,0,0,0},
+        {0,0,0,2,0,0},
+        {0,0,0,0,0,0},
+        {0,0,1,0,0,0},
         {0,0,0,0,0,0},
         {0,0,0,0,0,0},
-        {0,0,0,1,0,2},
-        {2,0,2,0,2,0},
     };
+    // int b_array[6][6] = // Board for playing
+    // {
+    //     {0,1,0,1,0,1},
+    //     {1,0,1,0,1,0},
+    //     {0,0,0,0,0,0},
+    //     {0,0,0,0,0,0},
+    //     {0,2,0,2,0,2},
+    //     {2,0,2,0,2,0},
+    // };
     // Initialize vector for possible move pairs
     std::vector<std::pair<int,int> > possibles;
     // Creates game window instance
@@ -261,47 +308,85 @@ int main() {
                     // Gets mouse co-ords and sets highlight on left click, 
                     // otherwise break
                     if(event.mouseButton.button == sf::Mouse::Left) {
-                        // Gets x and y co-ords of board of mouse click
-                        m_xcord = event.mouseButton.x / 100;
-                        m_ycord = event.mouseButton.y / 100;
-                        // Gets whether square is black, white, or empty
-                        piece_type = b_array[m_ycord][m_xcord];
-                        // If a player clicks on a piece that isn't theres,
-                        // behave as if they clicked an empty space
-                        if(turn && (piece_type == 2)) { piece_type = 0; }
-                        else if(!turn && (piece_type == 1)) { piece_type = 0; }
-                        if(piece_type != 0 || held) {
-                            if(!held) {
-                                // Sets highlight box to last square clicked
-                                hlight.setPosition(m_xcord*100+3,m_ycord*100+3);
-                                // Calculates possible moves
-                                setPossibles(m_ycord,m_xcord,b_array,possibles);
-                                // Creates original board co-ordinates
-                                origin = std::make_pair(m_ycord,m_xcord);
-                                // If not empty, highlight clicked square
-                                if(piece_type != 0) { hvalid = 1; } 
-                                else { hvalid = 0; }
-                                // Piece is being "held"
-                                held = !held;
-                            } else {
-                                // Creates destination board co-ordinates
-                                dest = std::make_pair(m_ycord,m_xcord);
-                                // Checks if move is valid and then moves pieces
-                                if(isValidMove(dest,possibles)) {
-                                    std::cout << "Piece moved!" << std::endl;
-                                    // Checks if piece was captured during move, iterates
-                                    // capture totals respectively.
-                                    if(movePiece(origin,dest,b_array)) {
-                                        if(turn) { wcaps++; }
-                                        else { bcaps++; }
+                        // If nobody has won, allow movement
+                        if(win == 0) {
+                            // Gets x and y co-ords of board of mouse click
+                            m_xcord = event.mouseButton.x / 100;
+                            m_ycord = event.mouseButton.y / 100;
+                            // Gets whether square is black, white, or empty
+                            piece_type = b_array[m_ycord][m_xcord];
+                            // If a player clicks on a piece that isn't theres,
+                            // behave as if they clicked an empty space
+                            if(turn && (piece_type == 2)) { piece_type = 0; }
+                            else if(!turn && (piece_type == 1)) { piece_type = 0; }
+                            if(piece_type != 0 || held) {
+                                if(!held) {
+                                    // Sets highlight box to last square clicked
+                                    hlight.setPosition(m_xcord*100+3,m_ycord*100+3);
+                                    // Calculates possible moves
+                                    setPossibles(m_ycord,m_xcord,b_array,possibles);
+                                    // Creates original board co-ordinates
+                                    origin = std::make_pair(m_ycord,m_xcord);
+                                    // If not empty, highlight clicked square
+                                    if(piece_type != 0) { hvalid = 1; } 
+                                    else { hvalid = 0; }
+                                    // Piece is being "held"
+                                    held = !held;
+                                } else {
+                                    // Creates destination board co-ordinates
+                                    dest = std::make_pair(m_ycord,m_xcord);
+                                    // Checks if move is valid and then moves pieces
+                                    if(isValidMove(dest,possibles)) {
+                                        // Checks if piece was captured during move, iterates
+                                        // capture totals respectively.
+                                        if(movePiece(origin,dest,b_array)) {
+                                            if(turn) { 
+                                                wcaps++; 
+                                                if(wcaps == 6) { 
+                                                    win = 1; 
+                                                    window.setTitle("WHITE won!");
+                                                }
+                                            }
+                                            else { 
+                                                bcaps++;
+                                                if(bcaps == 6) { 
+                                                    win = 2;
+                                                    window.setTitle("BLACK won!");
+                                                }
+                                            }
+                                        }
+                                        poss = checkPossibles(b_array,possibles);
+                                        std::cout << "Poss #: " << poss << std::endl;
+                                        switch(poss) {
+                                            case 0:
+                                                if(wcaps == bcaps) {
+                                                    win = 3;
+                                                    window.setTitle("It's a TIE!");
+                                                }
+                                                else if(wcaps > bcaps) {
+                                                    win = 1;
+                                                    window.setTitle("WHITE won!");
+                                                }
+                                                else {
+                                                    win = 2;
+                                                    window.setTitle("BLACK won!");
+                                                }
+                                                break;
+                                            case 1:
+                                                if(turn && poss == 1) { turn = !turn; } // Toggles turn vals so that Black turn is skipped
+                                                break;
+                                            case 2:
+                                                if(!turn && poss == 2) { turn = !turn; } // Toggles turn vals so that White turn is skipped
+                                                break;
+                                            default:
+                                                break;
+                                        }
+                                        // Switch turns
+                                        turn = !turn;
                                     }
-                                    std::cout << "White has " << wcaps << " captures." << std::endl;
-                                    std::cout << "Black has " << bcaps << " captures." << std::endl;
-                                    // Switch turns
-                                    turn = !turn;
+                                    // Piece is "released"
+                                    held = !held;
                                 }
-                                // Piece is "released"
-                                held = !held;
                             }
                         }
                     }
